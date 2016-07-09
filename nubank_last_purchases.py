@@ -30,6 +30,7 @@ INPUT_DATE_FORMAT = '%d %b %Y'
 OUTPUT_DATE_FORMAT = '%d/%m/%Y'
 NUBANK_TAG = 'Nubank'
 SEPARATOR = ';'
+TRANSACTIONS_LIMIT = 10
 
 
 def login_to_page(browser, id, password):
@@ -48,9 +49,9 @@ def is_logged_in(browser):
 
 def extract_last_purchases(browser, try_num):
     try:
-        transactions = list(reversed(WebDriverWait(browser, 30).until(EC.presence_of_all_elements_located(
-            (By.CLASS_NAME, TRANSACTION_CLASS_NAME)))))
-
+        transactions = list(WebDriverWait(browser, 30).until(EC.presence_of_all_elements_located(
+            (By.CLASS_NAME, TRANSACTION_CLASS_NAME))))[:TRANSACTIONS_LIMIT]
+        transactions = list(reversed(transactions))
         for t in transactions:
             amount = t.find_element(By.CLASS_NAME, AMOUNT_CLASS_NAME).text
             description = t.find_element(By.CLASS_NAME, DESCRIPTION_CLASS_NAME).text
@@ -62,8 +63,7 @@ def extract_last_purchases(browser, try_num):
     except TimeoutException:
         log = browser.get_log('browser')
         for entry in log:
-            if entry['message'].contains('500'):
-                print 'Server failed to respond'
+            print entry['message']
         if try_num > 0:
             browser.refresh()
             extract_last_purchases(browser, try_num - 1)
