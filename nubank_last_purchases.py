@@ -30,8 +30,7 @@ INPUT_DATE_FORMAT = '%d %b %Y'
 OUTPUT_DATE_FORMAT = '%d/%m/%Y'
 NUBANK_TAG = 'Nubank'
 SEPARATOR = ';'
-TRANSACTIONS_LIMIT = 10
-
+TRANSACTIONS_LIMIT = 20
 
 def login_to_page(browser, id, password):
     username_field = browser.find_element_by_id(USER_FIELD_ID)
@@ -86,10 +85,7 @@ def main():
 
     id = sys.argv[1]
     password = sys.argv[2]
-    d = DesiredCapabilities.CHROME
-    d['loggingPrefs'] = {'browser': 'ALL'}
-    #browser = webdriver.PhantomJS()
-    browser = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver', desired_capabilities=d)
+    browser = webdriver.PhantomJS()
     print('Accessing website...')
     browser.get(NUBANK_TRANSACTIONS_URL)
     print('Done.')
