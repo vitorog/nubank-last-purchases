@@ -7,7 +7,7 @@ from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import  TimeoutException
+from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import sys
@@ -16,7 +16,7 @@ import locale
 from datetime import date
 
 NUBANK_LOGIN_URL = 'https://conta.nubank.com.br/#/login'
-NUBANK_TRANSACTIONS_URL = 'https://conta.nubank.com.br/#/transactions';
+NUBANK_TRANSACTIONS_URL = 'https://conta.nubank.com.br/#/transactions'
 USER_FIELD_ID = 'username'
 PASSWORD_FIELD_ID = 'input_001'
 NU_BUTTON_CLASS_NAME = 'nu-button'
@@ -30,7 +30,7 @@ INPUT_DATE_FORMAT = '%d %b %Y'
 OUTPUT_DATE_FORMAT = '%d/%m/%Y'
 NUBANK_TAG = 'Nubank'
 SEPARATOR = ';'
-TRANSACTIONS_LIMIT = 20
+
 
 def login_to_page(browser, id, password):
     username_field = browser.find_element_by_id(USER_FIELD_ID)
@@ -40,16 +40,18 @@ def login_to_page(browser, id, password):
     password_field_id.send_keys(password)
     login_button.click()
 
+
 def is_logged_in(browser):
     if browser.current_url == NUBANK_TRANSACTIONS_URL:
         return True
     else:
         return False
 
-def extract_last_purchases(browser, try_num):
+
+def extract_last_purchases(browser, try_num, transactions_limit):
     try:
         transactions = list(WebDriverWait(browser, 30).until(EC.presence_of_all_elements_located(
-            (By.CLASS_NAME, TRANSACTION_CLASS_NAME))))[:TRANSACTIONS_LIMIT]
+            (By.CLASS_NAME, TRANSACTION_CLASS_NAME))))[:transactions_limit]
         transactions = list(reversed(transactions))
         for t in transactions:
             amount = t.find_element(By.CLASS_NAME, AMOUNT_CLASS_NAME).text
@@ -62,29 +64,33 @@ def extract_last_purchases(browser, try_num):
     except TimeoutException:
         log = browser.get_log('browser')
         for entry in log:
-            print entry['message']
+            print(entry['message'])
         if try_num > 0:
             browser.refresh()
             extract_last_purchases(browser, try_num - 1)
         else:
-            print 'Page failed to load'
+            print('Page failed to load')
             raise TimeoutException
 
+
 def print_spreadsheet_format(description, amount, transaction_date):
-    print description + SEPARATOR + amount + SEPARATOR + NUBANK_TAG + SEPARATOR + transaction_date
+    print(description + SEPARATOR + amount + SEPARATOR + NUBANK_TAG + SEPARATOR + transaction_date)
+
 
 def set_locale():
     current_locale = locale.setlocale(locale.LC_TIME, '')
     locale.setlocale(locale.LC_TIME, current_locale)
 
+
 def main():
-    if len(sys.argv) < 3:
-        print('Missing id and pass')
-        print('Usage: python nubank_last_purchases.py ID PASS')
+    if len(sys.argv) < 4:
+        print('Missing a parameter')
+        print('Usage: python nubank_last_purchases.py ID PASS LIMIT')
         sys.exit()
 
-    id = sys.argv[1]
+    username = sys.argv[1]
     password = sys.argv[2]
+    transactions_limit = int(sys.argv[3])
     browser = webdriver.PhantomJS()
     print('Accessing website...')
     browser.get(NUBANK_TRANSACTIONS_URL)
@@ -93,19 +99,19 @@ def main():
     set_locale()
     try:
         if not is_logged_in(browser):
-            login_to_page(browser, id, password)
+            login_to_page(browser, username, password)
         num_tries = 5
-        extract_last_purchases(browser, num_tries)
+        extract_last_purchases(browser, num_tries, transactions_limit)
         result = 'success'
     except TimeoutException as e:
         print('Process timeout')
+        print(e)
         result = 'failed'
     finally:
-        #print('Saving result screenshot...')
-        #browser.save_screenshot(result + '_' + str(datetime.datetime.now()) + '.png')
+        print('Saving result screenshot...')
+        browser.save_screenshot(result + '_' + str(datetime.datetime.now()) + '.png')
         browser.quit()
 
 
 if __name__ == '__main__':
     main()
-
