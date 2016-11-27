@@ -39,6 +39,7 @@ def login_to_page(browser, id, password):
     username_field.send_keys(id)
     password_field_id.send_keys(password)
     login_button.click()
+    print('Logging in...')
 
 
 def is_logged_in(browser):
@@ -50,7 +51,7 @@ def is_logged_in(browser):
 
 def extract_last_purchases(browser, try_num, transactions_limit):
     try:
-        transactions = list(WebDriverWait(browser, 30).until(EC.presence_of_all_elements_located(
+        transactions = list(WebDriverWait(browser, 180).until(EC.presence_of_all_elements_located(
             (By.CLASS_NAME, TRANSACTION_CLASS_NAME))))[:transactions_limit]
         transactions = list(reversed(transactions))
         for t in transactions:
@@ -67,7 +68,7 @@ def extract_last_purchases(browser, try_num, transactions_limit):
             print(entry['message'])
         if try_num > 0:
             browser.refresh()
-            extract_last_purchases(browser, try_num - 1)
+            extract_last_purchases(browser, try_num - 1, transactions_limit)
         else:
             print('Page failed to load')
             raise TimeoutException
@@ -92,6 +93,9 @@ def main():
     password = sys.argv[2]
     transactions_limit = int(sys.argv[3])
     browser = webdriver.PhantomJS()
+    browser.implicitly_wait(180)
+    browser.set_page_load_timeout(180)
+
     print('Accessing website...')
     browser.get(NUBANK_TRANSACTIONS_URL)
     print('Done.')
@@ -100,7 +104,9 @@ def main():
     try:
         if not is_logged_in(browser):
             login_to_page(browser, username, password)
+            print('Finished logging in.')
         num_tries = 5
+        print('Extracting purchases...')
         extract_last_purchases(browser, num_tries, transactions_limit)
         result = 'success'
     except TimeoutException as e:
