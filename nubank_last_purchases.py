@@ -58,8 +58,11 @@ def extract_last_purchases(browser, try_num, transactions_limit):
             amount = t.find_element(By.CLASS_NAME, AMOUNT_CLASS_NAME).text
             description = t.find_element(By.CLASS_NAME, DESCRIPTION_CLASS_NAME).text
             transaction_date = t.find_element(By.CLASS_NAME, TIME_CLASS_NAME).text + ' ' + str(date.today().year)
-            converted_date = datetime.datetime.strptime(transaction_date, INPUT_DATE_FORMAT).strftime(
-                OUTPUT_DATE_FORMAT)
+            try:
+                converted_date = datetime.datetime.strptime(transaction_date, INPUT_DATE_FORMAT).strftime(
+                    OUTPUT_DATE_FORMAT)
+            except ValueError:
+                converted_date = transaction_date
             print_spreadsheet_format(description, amount, converted_date)
     # For some reason Nubank's webpage fails to load most of the time...
     except TimeoutException:
@@ -114,7 +117,7 @@ def main():
         print(e)
         result = 'failed'
     finally:
-        print('Saving result screenshot...')
+        #print('Saving result screenshot...')
         browser.save_screenshot(result + '_' + str(datetime.datetime.now()) + '.png')
         browser.quit()
 
