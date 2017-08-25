@@ -119,9 +119,9 @@ def add_purchases_to_spreadsheet(purchases_list):
     col = last_purchases_col
 
     print('Finding last purchase stored...')
-    last_purchase_index, row = get_last_purchase_index_and_row(purchases_list, row, worksheet)
+    last_purchase_index, row = get_last_purchase_index_and_row(purchases_list, row, col, worksheet)
 
-    if last_purchase_index >= len(purchases_list):
+    if last_purchase_index is -1:
         print('No new purchases detected.')
         return
 
@@ -146,23 +146,24 @@ def add_purchases_to_spreadsheet(purchases_list):
     print('Done!')
 
 
-def get_last_purchase_index_and_row(purchases_list, row, worksheet):
+def get_last_purchase_index_and_row(purchases_list, row, col, worksheet):
+    hash_values = worksheet.col_values(col + 4)
+    hash_values = list(filter(None, hash_values))[1:]
+    if len(hash_values) == 0:
+        return 0, row
+
     last_purchase_index = -1
-    idx = len(purchases_list) - 1
-    for p in list(reversed(purchases_list)):
+    for idx, p in enumerate(purchases_list):
         desc = p['description']
         amount = p['amount']
         p_date = p['date']
         p_str = build_transaction_str(desc, amount, p_date)
-        str_hash = calculate_transaction_hash(p_str)
+        str_hash = str(calculate_transaction_hash(p_str))
 
-        try:
-            p_cell = worksheet.find(str(str_hash))
-            row = p_cell.row + 1
-            last_purchase_index = idx + 1
+        if str_hash not in hash_values:
+            row = row + idx
+            last_purchase_index = idx
             break
-        except CellNotFound:
-            idx = idx - 1
     return last_purchase_index, row
 
 
