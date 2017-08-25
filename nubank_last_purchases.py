@@ -77,7 +77,7 @@ def extract_last_purchases(browser, try_num, transactions_limit):
             print(entry['message'])
         if try_num > 0:
             browser.refresh()
-            extract_last_purchases(browser, try_num - 1, transactions_limit)
+            return extract_last_purchases(browser, try_num - 1, transactions_limit)
         else:
             print('Page failed to load')
             raise TimeoutException
