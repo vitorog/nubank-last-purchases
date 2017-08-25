@@ -84,13 +84,13 @@ def extract_last_purchases(browser, try_num, transactions_limit):
 
 
 def print_spreadsheet_format(description, amount, transaction_date):
-    p_str = build_transaction_str(description, amount, transaction_date)
-    p_hash = calculate_transaction_hash(str)
-    print(p_str + SEPARATOR + str(p_hash))
+    t_str = build_transaction_str(description, amount, transaction_date)
+    t_hash = calculate_transaction_hash(t_str)
+    print(t_str + SEPARATOR + str(t_hash))
 
 
-def calculate_transaction_hash(str):
-    return int(hashlib.md5(str.encode('UTF-8')).hexdigest(), 16)
+def calculate_transaction_hash(t_str):
+    return int(hashlib.md5(t_str.encode('UTF-8')).hexdigest(), 16)
 
 
 def build_transaction_str(description, amount, transaction_date):
@@ -149,7 +149,7 @@ def add_purchases_to_spreadsheet(purchases_list):
 def get_last_purchase_index_and_row(purchases_list, row, worksheet):
     last_purchase_index = -1
     idx = len(purchases_list) - 1
-    for p in reversed(purchases_list):
+    for p in list(reversed(purchases_list)):
         desc = p['description']
         amount = p['amount']
         p_date = p['date']
