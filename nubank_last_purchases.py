@@ -1,19 +1,18 @@
 __author__ = 'vitorog'
 
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-import selenium.webdriver.support.ui as ui
-from selenium.webdriver.support.ui import Select
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
-from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-import sys
 import datetime
+import hashlib
 import locale
+import sys
+import gspread
 from datetime import date
+from gspread import CellNotFound
+from oauth2client.service_account import ServiceAccountCredentials
+from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 NUBANK_LOGIN_URL = 'https://conta.nubank.com.br/#/login'
 NUBANK_TRANSACTIONS_URL = 'https://conta.nubank.com.br/#/transactions'
@@ -50,6 +49,7 @@ def is_logged_in(browser):
 
 
 def extract_last_purchases(browser, try_num, transactions_limit):
+    purchases_list = []
     try:
         transactions = list(WebDriverWait(browser, 180).until(EC.presence_of_all_elements_located(
             (By.CLASS_NAME, TRANSACTION_CLASS_NAME))))[:transactions_limit]
@@ -63,7 +63,13 @@ def extract_last_purchases(browser, try_num, transactions_limit):
                     OUTPUT_DATE_FORMAT)
             except ValueError:
                 converted_date = transaction_date
+
             print_spreadsheet_format(description, amount, converted_date)
+            purchases_list.append({'description': description, 'amount': amount,
+                                   'type': NUBANK_TAG, 'date': converted_date})
+
+        return purchases_list
+
     # For some reason Nubank's webpage fails to load most of the time...
     except TimeoutException:
         log = browser.get_log('browser')
@@ -78,12 +84,86 @@ def extract_last_purchases(browser, try_num, transactions_limit):
 
 
 def print_spreadsheet_format(description, amount, transaction_date):
-    print(description + SEPARATOR + amount + SEPARATOR + NUBANK_TAG + SEPARATOR + transaction_date)
+    p_str = build_transaction_str(description, amount, transaction_date)
+    p_hash = calculate_transaction_hash(str)
+    print(p_str + SEPARATOR + str(p_hash))
+
+
+def calculate_transaction_hash(str):
+    return int(hashlib.md5(str.encode('UTF-8')).hexdigest(), 16)
+
+
+def build_transaction_str(description, amount, transaction_date):
+    return description + SEPARATOR + amount + SEPARATOR + NUBANK_TAG + SEPARATOR + transaction_date
 
 
 def set_locale():
     current_locale = locale.setlocale(locale.LC_TIME, '')
     locale.setlocale(locale.LC_TIME, current_locale)
+
+
+def add_purchases_to_spreadsheet(purchases_list):
+    print('Accessing spreadsheet...')
+    scope = ['https://spreadsheets.google.com/feeds']
+    creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', scope)
+    client = gspread.authorize(creds)
+
+    sheet = client.open('Finanças - 2017')
+    worksheet = sheet.get_worksheet(0)
+
+    last_purchases_cell = worksheet.find('Últimas Compras')
+    last_purchases_row = last_purchases_cell.row
+    last_purchases_col = last_purchases_cell.col
+
+    row = last_purchases_row + 2
+    col = last_purchases_col
+
+    print('Finding last purchase stored...')
+    last_purchase_index, row = get_last_purchase_index_and_row(purchases_list, row, worksheet)
+
+    if last_purchase_index >= len(purchases_list):
+        print('No new purchases detected.')
+        return
+
+    print('Updating spreadsheet with new purchases')
+    for idx in range(last_purchase_index, len(purchases_list)):
+        p = purchases_list[idx]
+        desc = p['description']
+        amount = p['amount']
+        p_date = p['date']
+        p_str = build_transaction_str(desc, amount, p_date)
+        str_hash = calculate_transaction_hash(p_str)
+
+        print('Inserting: ' + p_str)
+        worksheet.update_cell(row, col, desc)
+        worksheet.update_cell(row, col + 1, amount)
+        worksheet.update_cell(row, col + 2, NUBANK_TAG)
+        worksheet.update_cell(row, col + 3, p_date)
+        worksheet.update_cell(row, col + 4, str_hash)
+
+        row = row + 1
+
+    print('Done!')
+
+
+def get_last_purchase_index_and_row(purchases_list, row, worksheet):
+    last_purchase_index = -1
+    idx = len(purchases_list) - 1
+    for p in reversed(purchases_list):
+        desc = p['description']
+        amount = p['amount']
+        p_date = p['date']
+        p_str = build_transaction_str(desc, amount, p_date)
+        str_hash = calculate_transaction_hash(p_str)
+
+        try:
+            p_cell = worksheet.find(str(str_hash))
+            row = p_cell.row + 1
+            last_purchase_index = idx + 1
+            break
+        except CellNotFound:
+            idx = idx - 1
+    return last_purchase_index, row
 
 
 def main():
@@ -110,14 +190,15 @@ def main():
             print('Finished logging in.')
         num_tries = 5
         print('Extracting purchases...')
-        extract_last_purchases(browser, num_tries, transactions_limit)
+        purchases_list = extract_last_purchases(browser, num_tries, transactions_limit)
+        add_purchases_to_spreadsheet(purchases_list)
         result = 'success'
     except TimeoutException as e:
         print('Process timeout')
         print(e)
         result = 'failed'
     finally:
-        #print('Saving result screenshot...')
+        # print('Saving result screenshot...')
         browser.save_screenshot(result + '_' + str(datetime.datetime.now()) + '.png')
         browser.quit()
 
