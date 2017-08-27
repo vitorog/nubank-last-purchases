@@ -6,7 +6,6 @@ import locale
 import sys
 import gspread
 from datetime import date
-from gspread import CellNotFound
 from oauth2client.service_account import ServiceAccountCredentials
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
@@ -102,6 +101,20 @@ def set_locale():
     locale.setlocale(locale.LC_TIME, current_locale)
 
 
+def get_last_purchase_row(hash_values, row):
+    not_found = True
+    last_purchase_row = row
+    idx = row
+
+    # Find the first empty row after newest purchases
+    while not_found and idx < len(hash_values):
+        if hash_values[idx] is None:
+            last_purchase_row = idx
+            break
+        idx = idx + 1
+    return last_purchase_row
+
+
 def add_purchases_to_spreadsheet(purchases_list):
     print('Accessing spreadsheet...')
     scope = ['https://spreadsheets.google.com/feeds']
@@ -119,52 +132,36 @@ def add_purchases_to_spreadsheet(purchases_list):
     col = last_purchases_col
 
     print('Finding last purchase stored...')
-    last_purchase_index, row = get_last_purchase_index_and_row(purchases_list, row, col, worksheet)
+    hash_values = worksheet.col_values(col + 4)
+    last_purchase_row = get_last_purchase_row(hash_values, row)
 
-    if last_purchase_index is -1:
-        print('No new purchases detected.')
-        return
+    # Remove empty rows and get only rows with hash values
+    existing_hashes = list(filter(None, hash_values))[1:]
 
     print('Updating spreadsheet with new purchases')
-    for idx in range(last_purchase_index, len(purchases_list)):
+    num_to_insert = len(purchases_list)
+    row = last_purchase_row
+    idx = 0
+    while num_to_insert > 0 and idx < len(purchases_list):
         p = purchases_list[idx]
         desc = p['description']
         amount = p['amount']
         p_date = p['date']
         p_str = build_transaction_str(desc, amount, p_date)
-        str_hash = calculate_transaction_hash(p_str)
-
-        print('Inserting: ' + p_str)
-        worksheet.update_cell(row, col, desc)
-        worksheet.update_cell(row, col + 1, amount)
-        worksheet.update_cell(row, col + 2, NUBANK_TAG)
-        worksheet.update_cell(row, col + 3, p_date)
-        worksheet.update_cell(row, col + 4, str_hash)
+        str_hash = str(calculate_transaction_hash(p_str))
+        if str_hash not in existing_hashes:
+            print('Inserting: ' + p_str)
+            worksheet.update_cell(row, col, desc)
+            worksheet.update_cell(row, col + 1, amount)
+            worksheet.update_cell(row, col + 2, NUBANK_TAG)
+            worksheet.update_cell(row, col + 3, p_date)
+            worksheet.update_cell(row, col + 4, str_hash)
 
         row = row + 1
+        idx = idx + 1
+        num_to_insert = num_to_insert - 1
 
     print('Done!')
-
-
-def get_last_purchase_index_and_row(purchases_list, row, col, worksheet):
-    hash_values = worksheet.col_values(col + 4)
-    hash_values = list(filter(None, hash_values))[1:]
-    if len(hash_values) == 0:
-        return 0, row
-
-    last_purchase_index = -1
-    for idx, p in enumerate(purchases_list):
-        desc = p['description']
-        amount = p['amount']
-        p_date = p['date']
-        p_str = build_transaction_str(desc, amount, p_date)
-        str_hash = str(calculate_transaction_hash(p_str))
-
-        if str_hash not in hash_values:
-            row = row + idx
-            last_purchase_index = idx
-            break
-    return last_purchase_index, row
 
 
 def main():
