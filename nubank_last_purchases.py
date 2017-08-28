@@ -104,7 +104,8 @@ def set_locale():
 def get_last_purchase_row(hash_values, row):
     not_found = True
     last_purchase_row = row
-    idx = row
+    # idx starts with 0, but row is the actual row number
+    idx = row - 1
 
     # Find the first empty row after newest purchases
     while not_found and idx < len(hash_values):
