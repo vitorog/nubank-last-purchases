@@ -108,8 +108,8 @@ def get_last_purchase_row(hash_values, row):
 
     # Find the first empty row after newest purchases
     while not_found and idx < len(hash_values):
-        if hash_values[idx] is None:
-            last_purchase_row = idx
+        if not hash_values[idx]:
+            last_purchase_row = idx + 1
             break
         idx = idx + 1
     return last_purchase_row
