@@ -157,8 +157,8 @@ def add_purchases_to_spreadsheet(purchases_list):
             worksheet.update_cell(row, col + 2, NUBANK_TAG)
             worksheet.update_cell(row, col + 3, p_date)
             worksheet.update_cell(row, col + 4, str_hash)
+            row = row + 1
 
-        row = row + 1
         idx = idx + 1
         num_to_insert = num_to_insert - 1
 
