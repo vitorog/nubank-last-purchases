@@ -56,16 +56,10 @@ def extract_last_purchases(browser, try_num, transactions_limit):
         for t in transactions:
             amount = t.find_element(By.CLASS_NAME, AMOUNT_CLASS_NAME).text
             description = t.find_element(By.CLASS_NAME, DESCRIPTION_CLASS_NAME).text
-            transaction_date = t.find_element(By.CLASS_NAME, TIME_CLASS_NAME).text + ' ' + str(date.today().year)
-            try:
-                converted_date = datetime.datetime.strptime(transaction_date, INPUT_DATE_FORMAT).strftime(
-                    OUTPUT_DATE_FORMAT)
-            except ValueError:
-                converted_date = transaction_date
-
-            print_spreadsheet_format(description, amount, converted_date)
+            purchase_date = t.find_element(By.CLASS_NAME, TIME_CLASS_NAME).text + ' ' + str(date.today().year)
+            print_spreadsheet_format(description, amount, purchase_date)
             purchases_list.append({'description': description, 'amount': amount,
-                                   'type': NUBANK_TAG, 'date': converted_date})
+                                   'type': NUBANK_TAG, 'date': purchase_date})
 
         return purchases_list
 
@@ -143,6 +137,7 @@ def add_purchases_to_spreadsheet(purchases_list):
     num_to_insert = len(purchases_list)
     row = last_purchase_row
     idx = 0
+
     while num_to_insert > 0 and idx < len(purchases_list):
         p = purchases_list[idx]
         desc = p['description']
