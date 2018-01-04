@@ -56,6 +56,7 @@ def extract_last_purchases(browser, try_num, transactions_limit):
         for t in transactions:
             amount = t.find_element(By.CLASS_NAME, AMOUNT_CLASS_NAME).text
             description = t.find_element(By.CLASS_NAME, DESCRIPTION_CLASS_NAME).text
+            # TODO: Get proper year, to avoid problems when the year changes, but purchase is from previous year
             purchase_date = t.find_element(By.CLASS_NAME, TIME_CLASS_NAME).text + ' ' + str(date.today().year)
             print_spreadsheet_format(description, amount, purchase_date)
             purchases_list.append({'description': description, 'amount': amount,
@@ -116,7 +117,7 @@ def add_purchases_to_spreadsheet(purchases_list):
     creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', scope)
     client = gspread.authorize(creds)
 
-    sheet = client.open('Finanças - 2017')
+    sheet = client.open('Finanças - 2018')
     worksheet = sheet.get_worksheet(0)
 
     last_purchases_cell = worksheet.find('Últimas Compras')
