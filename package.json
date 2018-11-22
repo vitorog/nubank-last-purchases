@@ -1,0 +1,38 @@
+{
+  "name": "nubank-last-purchases",
+  "version": "1.0.0",
+  "description": "Retrieves last purchases from nubank and stores it on a spreadsheet",
+  "main": "nubank-last-purchases.js",
+  "scripts": {
+    "start": "babel-node nubank-last-purchases.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vitorog/nubank-last-purchases.git"
+  },
+  "keywords": [
+    "nubank",
+    "rest",
+    "api",
+    "purchases",
+    "google",
+    "spreadsheet"
+  ],
+  "author": "vitorog",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/vitorog/nubank-last-purchases/issues"
+  },
+  "homepage": "https://github.com/vitorog/nubank-last-purchases#readme",
+  "dependencies": {
+    "google-spreadsheet": "^2.0.6",    
+    "request": "^2.88.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.1.5",
+    "@babel/core": "^7.1.6",
+    "@babel/node": "^7.0.0",
+    "@babel/preset-env": "^7.1.6"
+  }
+}
